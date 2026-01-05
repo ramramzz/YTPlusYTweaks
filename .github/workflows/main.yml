@@ -466,10 +466,13 @@ jobs:
           done
           
           # Handle conditional YTVideoOverlay
+          # Always clone YTVideoOverlay if YouQuality or YouPiP is enabled, they depend on Header.h file at build time
           if [ "$ENABLE_YQ" = "true" ] || [ "$ENABLE_YOUPIP" = "true" ]; then
-            if [ "$CACHE_YTVO_HIT" != "true" ]; then
+            if [ ! -d "YTVideoOverlay" ]; then
               echo "Cloning YTVideoOverlay..."
               git clone --quiet --depth=1 https://github.com/PoomSmart/YTVideoOverlay.git
+            else
+              echo "YTVideoOverlay already exists, skipping clone"
             fi
           fi
 

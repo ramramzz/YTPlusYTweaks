@@ -1,0 +1,450 @@
+name: Build YTPlusYTweaks2
+
+on:
+  workflow_dispatch:
+    inputs:
+
+      enable_youpip:
+        description: "Integrate YouPiP"
+        type: boolean
+        required: true
+        default: true
+
+      enable_ytuhd:
+        description: "Integrate YTUHD"
+        type: boolean
+        required: true
+        default: true
+
+      enable_yq:
+        description: "Integrate YouQuality"
+        type: boolean
+        required: true
+        default: true
+
+      enable_ryd:
+        description: "Integrate Return YouTube Dislikes"
+        type: boolean
+        required: true
+        default: true
+
+      enable_demc:
+        description: "Integrate DontEatMyContent"
+        type: boolean
+        required: true
+        default: true
+
+      enable_ytabconfig:
+        description: "Integrate YTABConfig"
+        type: boolean
+        required: true
+        default: true
+
+      enable_ytweaks:
+        description: "Integrate YTweaks"
+        type: boolean
+        required: true
+        default: true
+
+      enable_yticons:
+        description: "Integrate YTIcons"
+        type: boolean
+        required: true
+        default: false
+
+      enable_gonerino:
+        description: "Integrate Gonerino"
+        type: boolean
+        required: true
+        default: false
+
+      enable_yougroupsettings:
+        description: "Group Tweak Settings (YouGroupSettings)"
+        type: boolean
+        required: true
+        default: true
+
+      ipa_url:
+        description: "URL to the decrypted IPA file"
+        default: ""
+        required: true
+        type: string
+
+      tweak_version:
+        description: "The version of YTLite to use. E.g. 5.2b3 (Optional - leave empty to use latest tag from github.com/dayanch96/YTLite/tags)"
+        default: ""
+        required: false
+        type: string
+
+      ytlite_deb_url:
+        description: "Direct URL to a custom YTLite DEB file (Optional - overrides tweak_version if provided)"
+        default: ""
+        required: false
+        type: string
+
+      sdk_version:
+        description: "iOS SDK Version"
+        type: choice
+        options:
+          - 16.5
+          - 17.5
+          - 18.6
+        required: true
+        default: 16.5
+
+      custom_debs:
+        description: "Inject pre-built DEB(s) (Optional - accepts comma-separated direct download links OR one URL w/ zipped DEBs) Deb_Example: https://litter.catbox.moe/1.deb, https://litter.catbox.moe/2.deb Zip_Example: https://litter.catbox.moe/debs.zip"
+        default: ""
+        required: false
+        type: string
+
+      display_name:
+        description: "App Name (Optional)"
+        default: "YouTube"
+        required: true
+        type: string
+
+      bundle_id:
+        description: "BundleID (Optional)"
+        default: "com.google.ios.youtube"
+        required: true
+        type: string
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: 
+    runs-on: macos-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4.1.1
+        with:
+          #path: main
+          submodules: recursive
+      
+      - name: Check version
+        uses: ./.github/actions/check-version
+
+      - name: Hide sensitive inputs
+        uses: levibostian/action-hide-sensitive-inputs@v1
+        with:
+          exclude_inputs: bundle_id,display_name,enable_demc,enable_ryd,enable_youpip,enable_yq,enable_ytabconfig,enable_ytweaks,enable_yticons,enable_yougroupsettings,enable_ytuhd,enable_gonerino,info_note,tweak_version,sdk_version
+
+      - name: Check if any tweaks are enabled
+        id: check_tweaks
+        run: |
+          if [ "${{ inputs.enable_youpip }}" = "true" ] || \
+             [ "${{ inputs.enable_ytuhd }}" = "true" ] || \
+             [ "${{ inputs.enable_yq }}" = "true" ] || \
+             [ "${{ inputs.enable_ryd }}" = "true" ] || \
+             [ "${{ inputs.enable_demc }}" = "true" ] || \
+             [ "${{ inputs.enable_ytabconfig }}" = "true" ] || \
+             [ "${{ inputs.enable_ytweaks }}" = "true" ] || \
+             [ "${{ inputs.enable_yticons }}" = "true" ] || \
+             [ "${{ inputs.enable_yougroupsettings }}" = "true" ] || \
+             [ "${{ inputs.enable_gonerino }}" = "true" ]; then
+            echo "enabled=true" >> $GITHUB_OUTPUT
+            echo "Tweaks are enabled"
+          else
+            echo "enabled=false" >> $GITHUB_OUTPUT
+            echo "No tweaks enabled"
+          fi
+
+      - name: Get commit hashes
+        id: commit_hashes
+        uses: ./.github/actions/get-commit-hashes
+        with:
+          enable_youpip: ${{ steps.check_tweaks.outputs.enabled == 'true' && inputs.enable_youpip || 'false' }}
+          enable_ytuhd: ${{ steps.check_tweaks.outputs.enabled == 'true' && inputs.enable_ytuhd || 'false' }}
+          enable_ryd: ${{ steps.check_tweaks.outputs.enabled == 'true' && inputs.enable_ryd || 'false' }}
+          enable_yougroupsettings: ${{ steps.check_tweaks.outputs.enabled == 'true' && inputs.enable_yougroupsettings || 'false' }}
+          enable_yq: ${{ steps.check_tweaks.outputs.enabled == 'true' && inputs.enable_yq || 'false' }}
+          enable_ytabconfig: ${{ steps.check_tweaks.outputs.enabled == 'true' && inputs.enable_ytabconfig || 'false' }}
+          enable_ytweaks: ${{ steps.check_tweaks.outputs.enabled == 'true' && inputs.enable_ytweaks || 'false' }}
+          enable_yticons: ${{ steps.check_tweaks.outputs.enabled == 'true' && inputs.enable_yticons || 'false' }}
+          enable_demc: ${{ steps.check_tweaks.outputs.enabled == 'true' && inputs.enable_demc || 'false' }}
+          enable_gonerino: ${{ steps.check_tweaks.outputs.enabled == 'true' && inputs.enable_gonerino || 'false' }}
+
+      - name: Download and validate IPA
+        run: |
+          wget "${{ inputs.ipa_url }}" --no-verbose -O ${{ github.workspace }}/youtube.ipa
+
+          file_type=$(file --mime-type -b ${{ github.workspace }}/youtube.ipa)
+
+          if [[ "$file_type" != "application/x-ios-app" && "$file_type" != "application/zip" ]]; then
+            echo "::error::Validation failed: The downloaded file is not a valid IPA. Detected type: $file_type."
+            exit 1
+          fi
+
+      - name: Extract app version from IPA
+        id: app_version
+        run: |
+          INFO_PLIST=$(unzip -l ${{ github.workspace }}/youtube.ipa | grep -o "Payload/[^/]*\.app/Info\.plist" | head -n 1)
+          if [ -z "$INFO_PLIST" ]; then
+            echo "::error::Could not find Info.plist in IPA"
+            exit 1
+          fi
+          
+          mkdir -p ${{ github.workspace }}/ipa_extract
+          unzip -p ${{ github.workspace }}/youtube.ipa "$INFO_PLIST" > ${{ github.workspace }}/ipa_extract/Info.plist
+          
+          APP_VERSION=$(plutil -p ${{ github.workspace }}/ipa_extract/Info.plist 2>/dev/null | grep "CFBundleShortVersionString" | sed -E 's/.*"CFBundleShortVersionString"[[:space:]]*=>[[:space:]]*"([^"]+)".*/\1/')
+          if [ -z "$APP_VERSION" ]; then
+            echo "::error::Could not extract app version from Info.plist"
+            exit 1
+          fi
+          
+          echo "App version: $APP_VERSION"
+          echo "version=$APP_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Install dependencies
+        run: brew install make ldid
+
+      - name: Set GNU make PATH environment variable
+        run: echo "$(brew --prefix make)/libexec/gnubin" >> $GITHUB_PATH
+
+      - name: Cache Theos
+        if: steps.check_tweaks.outputs.enabled == 'true'
+        id: theos
+        uses: ./.github/actions/cache-theos
+        with:
+          sdk_version: ${{ inputs.sdk_version }}
+          theos_commit: ${{ steps.commit_hashes.outputs.theos }}
+
+      - name: Download iOS 16.5 SDK
+        if: steps.check_tweaks.outputs.enabled == 'true' && inputs.sdk_version == 16.5 && steps.theos.outputs.cache-hit != 'true'
+        uses: ./.github/actions/download-sdk-16.5
+        with:
+          theos_path: ${{ github.workspace }}/theos
+
+      - name: Download iOS 17.5 SDK
+        if: steps.check_tweaks.outputs.enabled == 'true' && inputs.sdk_version == 17.5 && steps.theos.outputs.cache-hit != 'true'
+        uses: ./.github/actions/download-sdk-17.5
+        with:
+          theos_path: ${{ github.workspace }}/theos
+
+      - name: Download iOS 18.6 SDK
+        if: steps.check_tweaks.outputs.enabled == 'true' && inputs.sdk_version == 18.6 && steps.theos.outputs.cache-hit != 'true'
+        uses: ./.github/actions/download-sdk-18.6
+        with:
+          theos_path: ${{ github.workspace }}/theos
+
+      - name: Cache Cyan
+        id: cache_cyan
+        uses: ./.github/actions/cache-cyan
+        with:
+          cyan_commit: ${{ steps.commit_hashes.outputs.cyan }}
+
+      - name: Get YTLite release
+        id: ytlite_version
+        if: inputs.ytlite_deb_url == ''
+        uses: ./.github/actions/get-YTLite
+        with:
+          tweak_version: ${{ inputs.tweak_version }}
+          workspace: ${{ github.workspace }}
+          github_token: ${{ github.token }}
+
+      - name: Download custom YTLite DEB
+        id: custom_ytlite
+        if: inputs.ytlite_deb_url != ''
+        run: |
+          wget "${{ inputs.ytlite_deb_url }}" --no-verbose -O ${{ github.workspace }}/ytplus.deb
+
+          file_type=$(file --mime-type -b ${{ github.workspace }}/ytplus.deb)
+          if [[ ! "$file_type" =~ ^application/(vnd\.debian\.binary-package|x-deb|x-debian-package)$ ]] && [[ ! "${{ inputs.ytlite_deb_url }}" =~ \.deb$ ]]; then
+            echo "::error::Downloaded file does not appear to be a valid DEB. Detected type: $file_type"
+            exit 1
+          fi
+
+          EXTRACTED_VERSION=$(dpkg-deb -f ${{ github.workspace }}/ytplus.deb Version 2>/dev/null || echo "custom")
+          echo "version=$EXTRACTED_VERSION" >> $GITHUB_OUTPUT
+          echo "Custom YTLite DEB version: $EXTRACTED_VERSION"
+
+      - name: Clone Open in YouTube (Safari extension)
+        run: |
+          git clone --quiet -n --depth=1 --filter=tree:0 https://github.com/CokePokes/YoutubeExtensions/
+          cd YoutubeExtensions
+          git sparse-checkout set --no-cone OpenYoutubeSafariExtension.appex
+          git checkout
+          mv *.appex ${{ github.workspace }}
+
+      - name: Clone YouTubeHeader
+        if: steps.check_tweaks.outputs.enabled == 'true'
+        uses: ./.github/actions/clone-youtube-header
+        with:
+          theos_path: ${{ github.workspace }}/theos
+          enable_demc: ${{ inputs.enable_demc }}
+
+      - name: Clone PSHeader
+        if: steps.check_tweaks.outputs.enabled == 'true'
+        uses: ./.github/actions/clone-ps-header
+        with:
+          theos_path: ${{ github.workspace }}/theos
+
+      - name: Cache tweaks
+        if: steps.check_tweaks.outputs.enabled == 'true'
+        id: cache_tweaks_step
+        uses: ./.github/actions/cache-tweaks
+        with:
+          enable_youpip: ${{ inputs.enable_youpip }}
+          enable_ytuhd: ${{ inputs.enable_ytuhd }}
+          enable_ryd: ${{ inputs.enable_ryd }}
+          enable_yougroupsettings: ${{ inputs.enable_yougroupsettings }}
+          enable_yq: ${{ inputs.enable_yq }}
+          enable_ytabconfig: ${{ inputs.enable_ytabconfig }}
+          enable_ytweaks: ${{ inputs.enable_ytweaks }}
+          enable_yticons: ${{ inputs.enable_yticons }}
+          enable_demc: ${{ inputs.enable_demc }}
+          enable_gonerino: ${{ inputs.enable_gonerino }}
+          sdk_version: ${{ inputs.sdk_version }}
+          youpip_commit: ${{ steps.commit_hashes.outputs.youpip }}
+          ytuhd_commit: ${{ steps.commit_hashes.outputs.ytuhd }}
+          ryd_commit: ${{ steps.commit_hashes.outputs.ryd }}
+          ygs_commit: ${{ steps.commit_hashes.outputs.ygs }}
+          yq_commit: ${{ steps.commit_hashes.outputs.yq }}
+          yabc_commit: ${{ steps.commit_hashes.outputs.yabc }}
+          ytwks_commit: ${{ steps.commit_hashes.outputs.ytwks }}
+          yticons_commit: ${{ steps.commit_hashes.outputs.yticons }}
+          demc_commit: ${{ steps.commit_hashes.outputs.demc }}
+          gonerino_commit: ${{ steps.commit_hashes.outputs.gonerino }}
+          ytvo_commit: ${{ steps.commit_hashes.outputs.ytvo }}
+
+      - name: Clone tweaks
+        if: steps.check_tweaks.outputs.enabled == 'true'
+        uses: ./.github/actions/clone-tweaks
+        with:
+          enable_youpip: ${{ inputs.enable_youpip }}
+          enable_ytuhd: ${{ inputs.enable_ytuhd }}
+          enable_ryd: ${{ inputs.enable_ryd }}
+          enable_yougroupsettings: ${{ inputs.enable_yougroupsettings }}
+          enable_yq: ${{ inputs.enable_yq }}
+          enable_ytabconfig: ${{ inputs.enable_ytabconfig }}
+          enable_ytweaks: ${{ inputs.enable_ytweaks }}
+          enable_yticons: ${{ inputs.enable_yticons }}
+          enable_demc: ${{ inputs.enable_demc }}
+          enable_gonerino: ${{ inputs.enable_gonerino }}
+          cache_youpip_hit: ${{ steps.cache_tweaks_step.outputs.cache_youpip_hit }}
+          cache_ytuhd_hit: ${{ steps.cache_tweaks_step.outputs.cache_ytuhd_hit }}
+          cache_ryd_hit: ${{ steps.cache_tweaks_step.outputs.cache_ryd_hit }}
+          cache_ygs_hit: ${{ steps.cache_tweaks_step.outputs.cache_ygs_hit }}
+          cache_yq_hit: ${{ steps.cache_tweaks_step.outputs.cache_yq_hit }}
+          cache_yabc_hit: ${{ steps.cache_tweaks_step.outputs.cache_yabc_hit }}
+          cache_ytwks_hit: ${{ steps.cache_tweaks_step.outputs.cache_ytwks_hit }}
+          cache_yticons_hit: ${{ steps.cache_tweaks_step.outputs.cache_yticons_hit }}
+          cache_demc_hit: ${{ steps.cache_tweaks_step.outputs.cache_demc_hit }}
+          cache_gonerino_hit: ${{ steps.cache_tweaks_step.outputs.cache_gonerino_hit }}
+          cache_ytvo_hit: ${{ steps.cache_tweaks_step.outputs.cache_ytvo_hit }}
+          workspace: ${{ github.workspace }}
+
+      - name: Build tweaks
+        if: steps.check_tweaks.outputs.enabled == 'true'
+        uses: ./.github/actions/build-tweaks
+        with:
+          enable_youpip: ${{ inputs.enable_youpip }}
+          enable_ytuhd: ${{ inputs.enable_ytuhd }}
+          enable_ryd: ${{ inputs.enable_ryd }}
+          enable_yougroupsettings: ${{ inputs.enable_yougroupsettings }}
+          enable_yq: ${{ inputs.enable_yq }}
+          enable_ytabconfig: ${{ inputs.enable_ytabconfig }}
+          enable_ytweaks: ${{ inputs.enable_ytweaks }}
+          enable_yticons: ${{ inputs.enable_yticons }}
+          enable_demc: ${{ inputs.enable_demc }}
+          enable_gonerino: ${{ inputs.enable_gonerino }}
+          cache_youpip_hit: ${{ steps.cache_tweaks_step.outputs.cache_youpip_hit }}
+          cache_ytuhd_hit: ${{ steps.cache_tweaks_step.outputs.cache_ytuhd_hit }}
+          cache_ryd_hit: ${{ steps.cache_tweaks_step.outputs.cache_ryd_hit }}
+          cache_ygs_hit: ${{ steps.cache_tweaks_step.outputs.cache_ygs_hit }}
+          cache_yq_hit: ${{ steps.cache_tweaks_step.outputs.cache_yq_hit }}
+          cache_yabc_hit: ${{ steps.cache_tweaks_step.outputs.cache_yabc_hit }}
+          cache_ytwks_hit: ${{ steps.cache_tweaks_step.outputs.cache_ytwks_hit }}
+          cache_yticons_hit: ${{ steps.cache_tweaks_step.outputs.cache_yticons_hit }}
+          cache_demc_hit: ${{ steps.cache_tweaks_step.outputs.cache_demc_hit }}
+          cache_gonerino_hit: ${{ steps.cache_tweaks_step.outputs.cache_gonerino_hit }}
+          cache_ytvo_hit: ${{ steps.cache_tweaks_step.outputs.cache_ytvo_hit }}
+          theos_path: ${{ github.workspace }}/theos
+          workspace: ${{ github.workspace }}
+
+      - name: Download user-provided DEB(s)
+        if: inputs.custom_debs != ''
+        run: |
+          cd ${{ github.workspace }}
+          temp_dir=$(mktemp -d)
+          trap "rm -rf $temp_dir" EXIT
+          
+          IFS=',' read -ra URL_ARRAY <<< "${{ inputs.custom_debs }}"
+          
+          for url in "${URL_ARRAY[@]}"; do
+            url=$(echo "$url" | xargs)
+            [ -z "$url" ] && continue
+            
+            filename=$(basename "$url" | sed 's/[?#].*$//')
+            [ -z "$filename" ] && filename="download_$(date +%s%N).tmp"
+            
+            echo "Downloading: $filename"
+            wget "$url" --quiet -O "$filename" || continue
+            
+            file_type=$(file --mime-type -b "$filename")
+            
+            # Handle ZIP files
+            if [[ "$file_type" =~ ^application/(zip|x-zip-compressed)$ ]] || [[ "$filename" =~ \.zip$ ]]; then
+              echo "Extracting ZIP: $filename"
+              unzip -q "$filename" -d "$temp_dir" 2>/dev/null || {
+                echo "::warning::Failed to extract ZIP: $filename"
+                rm -f "$filename"
+                continue
+              }
+              
+              deb_count=0
+              while IFS= read -r -d '' deb_file; do
+                cp "$deb_file" "$(basename "$deb_file")"
+                echo "  ✓ Extracted: $(basename "$deb_file")"
+                ((deb_count++))
+              done < <(find "$temp_dir" -type f -name "*.deb" -print0)
+              
+              [ $deb_count -eq 0 ] && echo "::warning::No DEB files in ZIP: $filename" || echo "✓ Extracted $deb_count DEB(s)"
+              rm -f "$filename"
+            
+            # Handle DEB files
+            elif [[ "$file_type" =~ ^application/(vnd\.debian\.binary-package|x-deb|x-debian-package)$ ]] || [[ "$filename" =~ \.deb$ ]]; then
+              [[ ! "$filename" =~ \.deb$ ]] && mv "$filename" "${filename%.*}.deb"
+              echo "✓ Validated: ${filename%.*}.deb"
+            
+            else
+              echo "::warning::Unknown file type ($file_type): $filename"
+              rm -f "$filename"
+            fi
+          done
+          
+          echo "DEBs to be injected:"
+          ls -1 *.deb 2>/dev/null | sed 's/^/  - /' || echo "  (none)"
+
+
+      - name: Inject tweaks into IPA
+        run: |
+          tweaks="ytplus.deb OpenYoutubeSafariExtension.appex"
+
+          for f in *.deb; do
+            if [ -f "$f" ]; then
+              tweaks="$tweaks $f"
+            fi
+          done
+
+          cyan -i youtube.ipa -o YTPlusYTweaks_${{ inputs.ytlite_deb_url != '' && steps.custom_ytlite.outputs.version || steps.ytlite_version.outputs.version }}_SDK${{ inputs.sdk_version }}_v${{ steps.app_version.outputs.version }}.ipa -uwef $tweaks -n "${{ inputs.display_name }}" -b ${{ inputs.bundle_id }}
+
+      - name: Upload to GitHub Releases
+        uses: softprops/action-gh-release@v2.0.1
+        with:
+          tag_name: ytp-${{ github.run_number }}
+          name: YTPlusYTweaks_${{ inputs.ytlite_deb_url != '' && steps.custom_ytlite.outputs.version || steps.ytlite_version.outputs.version }}_SDK${{ inputs.sdk_version }}_v${{ steps.app_version.outputs.version }} (${{ github.run_number }})
+          files: YTPlusYTweaks_${{ inputs.ytlite_deb_url != '' && steps.custom_ytlite.outputs.version || steps.ytlite_version.outputs.version }}_SDK${{ inputs.sdk_version }}_v${{ steps.app_version.outputs.version }}.ipa
+          draft: true
+
+      - name: Output Release URL
+        run: |
+          echo "::notice::Release available at: https://github.com/${{ github.repository }}/releases"

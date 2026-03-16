@@ -1,6 +1,8 @@
 # YouTube Plus (YTweaks Fork)
 [YouTube Plus](https://github.com/dayanch96/YTLite) with added plugins.
 
+v20.10.4 is ***strongly*** recommended for proper compatibility
+
 This repo focuses on simplifying the build process of YouTube Plus, and adding more optional tweaks to bundle with it (specifically [YTweaks](https://github.com/fosterbarnes/YTweaks)). No changes have been made to the YouTube Plus .deb itself, just the tweaks that get packaged with it. 
 
 When building the app, the latest stable YouTube Plus .deb is downloaded from the original repo, then other tweaks are built from source. All tweaks are then injected into your IPA.

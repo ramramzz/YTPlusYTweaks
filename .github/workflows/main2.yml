@@ -77,7 +77,7 @@ on:
         type: string
 
       ytlite_deb_url:
-        description: "Direct URL to a custom YTLite DEB file (Optional - overrides tweak_version if provided)"
+        description: "Direct URL to a custom YTLite DEB or DYLIB file (Optional - overrides tweak_version if provided)"
         default: ""
         required: false
         type: string
@@ -250,21 +250,31 @@ jobs:
           workspace: ${{ github.workspace }}
           github_token: ${{ github.token }}
 
-      - name: Download custom YTLite DEB
+      # ── CHANGED: supports both DEB and DYLIB for YTLite ──
+      - name: Download custom YTLite DEB or DYLIB
         id: custom_ytlite
         if: inputs.ytlite_deb_url != ''
         run: |
-          wget "${{ inputs.ytlite_deb_url }}" --no-verbose -O ${{ github.workspace }}/ytplus.deb
+          wget "${{ inputs.ytlite_deb_url }}" --no-verbose -O ${{ github.workspace }}/ytplus_download
 
-          file_type=$(file --mime-type -b ${{ github.workspace }}/ytplus.deb)
-          if [[ ! "$file_type" =~ ^application/(vnd\.debian\.binary-package|x-deb|x-debian-package)$ ]] && [[ ! "${{ inputs.ytlite_deb_url }}" =~ \.deb$ ]]; then
-            echo "::error::Downloaded file does not appear to be a valid DEB. Detected type: $file_type"
+          file_type=$(file --mime-type -b ${{ github.workspace }}/ytplus_download)
+
+          if [[ "$file_type" =~ ^application/(vnd\.debian\.binary-package|x-deb|x-debian-package)$ ]] || [[ "${{ inputs.ytlite_deb_url }}" =~ \.deb$ ]]; then
+            mv ${{ github.workspace }}/ytplus_download ${{ github.workspace }}/ytplus.deb
+            EXTRACTED_VERSION=$(dpkg-deb -f ${{ github.workspace }}/ytplus.deb Version 2>/dev/null || echo "custom")
+            echo "Custom YTLite DEB version: $EXTRACTED_VERSION"
+
+          elif [[ "$file_type" =~ ^application/(x-mach-binary|octet-stream)$ ]] || [[ "${{ inputs.ytlite_deb_url }}" =~ \.dylib$ ]]; then
+            mv ${{ github.workspace }}/ytplus_download ${{ github.workspace }}/ytplus.dylib
+            EXTRACTED_VERSION="custom"
+            echo "Custom YTLite DYLIB detected"
+
+          else
+            echo "::error::Downloaded file does not appear to be a valid DEB or DYLIB. Detected type: $file_type"
             exit 1
           fi
 
-          EXTRACTED_VERSION=$(dpkg-deb -f ${{ github.workspace }}/ytplus.deb Version 2>/dev/null || echo "custom")
           echo "version=$EXTRACTED_VERSION" >> $GITHUB_OUTPUT
-          echo "Custom YTLite DEB version: $EXTRACTED_VERSION"
 
       - name: Clone Open in YouTube (Safari extension)
         run: |
@@ -370,7 +380,6 @@ jobs:
           theos_path: ${{ github.workspace }}/theos
           workspace: ${{ github.workspace }}
 
-      # ── CHANGED: renamed step + dylib handling added ──
       - name: Download user-provided DEB(s) and DYLIB(s)
         if: inputs.custom_debs != ''
         run: |
@@ -402,7 +411,6 @@ jobs:
               }
               
               file_count=0
-              # ── CHANGED: find both .deb and .dylib inside ZIPs ──
               while IFS= read -r -d '' extracted_file; do
                 cp "$extracted_file" "$(basename "$extracted_file")"
                 echo "  ✓ Extracted: $(basename "$extracted_file")"
@@ -417,7 +425,7 @@ jobs:
               [[ ! "$filename" =~ \.deb$ ]] && mv "$filename" "${filename%.*}.deb"
               echo "✓ Validated DEB: ${filename%.*}.deb"
 
-            # ── CHANGED: new DYLIB block ──
+            # Handle DYLIB files
             elif [[ "$file_type" =~ ^application/(x-mach-binary|octet-stream)$ ]] || [[ "$filename" =~ \.dylib$ ]]; then
               [[ ! "$filename" =~ \.dylib$ ]] && mv "$filename" "${filename%.*}.dylib"
               echo "✓ Validated DYLIB: ${filename%.*}.dylib"
@@ -431,13 +439,19 @@ jobs:
           echo "Files to be injected:"
           ls -1 *.deb *.dylib 2>/dev/null | sed 's/^/  - /' || echo "  (none)"
 
+      # ── CHANGED: picks up ytplus.deb or ytplus.dylib, skips them in glob ──
       - name: Inject tweaks into IPA
         run: |
-          tweaks="ytplus.deb OpenYoutubeSafariExtension.appex"
+          if [ -f "ytplus.deb" ]; then
+            tweaks="ytplus.deb"
+          elif [ -f "ytplus.dylib" ]; then
+            tweaks="ytplus.dylib"
+          fi
 
-          # ── CHANGED: glob *.dylib in addition to *.deb ──
+          tweaks="$tweaks OpenYoutubeSafariExtension.appex"
+
           for f in *.deb *.dylib; do
-            if [ -f "$f" ]; then
+            if [ -f "$f" ] && [[ "$f" != "ytplus.deb" ]] && [[ "$f" != "ytplus.dylib" ]]; then
               tweaks="$tweaks $f"
             fi
           done

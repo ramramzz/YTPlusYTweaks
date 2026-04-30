@@ -93,7 +93,7 @@ on:
         default: 16.5
 
       custom_debs:
-        description: "Inject pre-built DEB(s) (Optional - accepts comma-separated direct download links OR one URL w/ zipped DEBs) Deb_Example: https://litter.catbox.moe/1.deb, https://litter.catbox.moe/2.deb Zip_Example: https://litter.catbox.moe/debs.zip"
+        description: "Inject pre-built DEB(s) or DYLIB(s) (Optional - accepts comma-separated direct download links OR one URL w/ zipped DEBs/DYLIBs) Deb_Example: https://litter.catbox.moe/1.deb, https://litter.catbox.moe/2.deb Zip_Example: https://litter.catbox.moe/debs.zip Dylib_Example: https://litter.catbox.moe/tweak.dylib"
         default: ""
         required: false
         type: string
@@ -370,7 +370,8 @@ jobs:
           theos_path: ${{ github.workspace }}/theos
           workspace: ${{ github.workspace }}
 
-      - name: Download user-provided DEB(s)
+      # ── CHANGED: renamed step + dylib handling added ──
+      - name: Download user-provided DEB(s) and DYLIB(s)
         if: inputs.custom_debs != ''
         run: |
           cd ${{ github.workspace }}
@@ -400,20 +401,26 @@ jobs:
                 continue
               }
               
-              deb_count=0
-              while IFS= read -r -d '' deb_file; do
-                cp "$deb_file" "$(basename "$deb_file")"
-                echo "  ✓ Extracted: $(basename "$deb_file")"
-                ((deb_count++))
-              done < <(find "$temp_dir" -type f -name "*.deb" -print0)
+              file_count=0
+              # ── CHANGED: find both .deb and .dylib inside ZIPs ──
+              while IFS= read -r -d '' extracted_file; do
+                cp "$extracted_file" "$(basename "$extracted_file")"
+                echo "  ✓ Extracted: $(basename "$extracted_file")"
+                ((file_count++))
+              done < <(find "$temp_dir" -type f \( -name "*.deb" -o -name "*.dylib" \) -print0)
               
-              [ $deb_count -eq 0 ] && echo "::warning::No DEB files in ZIP: $filename" || echo "✓ Extracted $deb_count DEB(s)"
+              [ $file_count -eq 0 ] && echo "::warning::No DEB or DYLIB files in ZIP: $filename" || echo "✓ Extracted $file_count file(s)"
               rm -f "$filename"
             
             # Handle DEB files
             elif [[ "$file_type" =~ ^application/(vnd\.debian\.binary-package|x-deb|x-debian-package)$ ]] || [[ "$filename" =~ \.deb$ ]]; then
               [[ ! "$filename" =~ \.deb$ ]] && mv "$filename" "${filename%.*}.deb"
-              echo "✓ Validated: ${filename%.*}.deb"
+              echo "✓ Validated DEB: ${filename%.*}.deb"
+
+            # ── CHANGED: new DYLIB block ──
+            elif [[ "$file_type" =~ ^application/(x-mach-binary|octet-stream)$ ]] || [[ "$filename" =~ \.dylib$ ]]; then
+              [[ ! "$filename" =~ \.dylib$ ]] && mv "$filename" "${filename%.*}.dylib"
+              echo "✓ Validated DYLIB: ${filename%.*}.dylib"
             
             else
               echo "::warning::Unknown file type ($file_type): $filename"
@@ -421,15 +428,15 @@ jobs:
             fi
           done
           
-          echo "DEBs to be injected:"
-          ls -1 *.deb 2>/dev/null | sed 's/^/  - /' || echo "  (none)"
-
+          echo "Files to be injected:"
+          ls -1 *.deb *.dylib 2>/dev/null | sed 's/^/  - /' || echo "  (none)"
 
       - name: Inject tweaks into IPA
         run: |
           tweaks="ytplus.deb OpenYoutubeSafariExtension.appex"
 
-          for f in *.deb; do
+          # ── CHANGED: glob *.dylib in addition to *.deb ──
+          for f in *.deb *.dylib; do
             if [ -f "$f" ]; then
               tweaks="$tweaks $f"
             fi

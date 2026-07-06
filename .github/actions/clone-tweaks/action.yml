@@ -86,7 +86,7 @@ runs:
         # enable_var|cache_var|repo_url|display_name|extra_flags
         declare -a tweaks=(
           "ENABLE_YOUPIP|CACHE_YOUPIP_HIT|https://github.com/PoomSmart/YouPiP.git|YouPiP|"
-          "ENABLE_YTUHD|CACHE_YTUHD_HIT|https://github.com/Tonwalter888/YTUHD.git|YTUHD|"
+          "ENABLE_YTUHD|CACHE_YTUHD_HIT|https://github.com/PoomSmart/YTUHD.git|YTUHD|--recurse-submodules --shallow-submodules"
           "ENABLE_RYD|CACHE_RYD_HIT|https://github.com/PoomSmart/Return-YouTube-Dislikes.git|Return-YouTube-Dislikes|"
           "ENABLE_YOUGROUPSETTINGS|CACHE_YGS_HIT|https://github.com/fosterbarnes/YouGroupSettings.git|YouGroupSettings|"
           "ENABLE_YQ|CACHE_YQ_HIT|https://github.com/PoomSmart/YouQuality.git|YouQuality|"
@@ -94,7 +94,7 @@ runs:
           "ENABLE_YTWEAKS|CACHE_YTWKS_HIT|https://github.com/fosterbarnes/YTweaks.git|YTweaks|"
           "ENABLE_YTICONS|CACHE_YTICONS_HIT|https://github.com/PoomSmart/YTIcons.git|YTIcons|"
           "ENABLE_DEMC|CACHE_DEMC_HIT|https://github.com/therealFoxster/DontEatMyContent.git|DontEatMyContent|--recurse-submodules"
-          "ENABLE_GONERINO|CACHE_GONERINO_HIT|https://github.com/castdrian/Gonerino.git|Gonerino|"
+          "ENABLE_GONERINO|CACHE_GONERINO_HIT|https://github.com/fosterbarnes/YGonerino.git|Gonerino|"
           "ENABLE_AUTOFLEX|CACHE_AUTOFLEX_HIT|https://github.com/pwnless/AutoFLEX.git|AutoFLEX|"
         )
         
@@ -102,7 +102,7 @@ runs:
           IFS='|' read -r enable_var cache_var repo_url display_name extra_flags <<< "$tweak"
           if [ "${!enable_var}" = "true" ] && [ "${!cache_var}" != "true" ]; then
             echo "Cloning $display_name..."
-            git clone --quiet --depth=1 $extra_flags "$repo_url"
+            git clone --quiet --depth=1 $extra_flags "$repo_url" "$display_name"
           fi
         done
         

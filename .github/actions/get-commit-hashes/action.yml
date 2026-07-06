@@ -108,7 +108,7 @@ runs:
         # env_var|output_key|repo_url|display_name
         declare -a tweaks=(
           "ENABLE_YOUPIP|youpip|https://github.com/PoomSmart/YouPiP.git|YouPiP"
-          "ENABLE_YTUHD|ytuhd|https://github.com/Tonwalter888/YTUHD.git|YTUHD"
+          "ENABLE_YTUHD|ytuhd|https://github.com/PoomSmart/YTUHD.git|YTUHD"
           "ENABLE_RYD|ryd|https://github.com/PoomSmart/Return-YouTube-Dislikes.git|Return-YouTube-Dislikes"
           "ENABLE_YOUGROUPSETTINGS|ygs|https://github.com/fosterbarnes/YouGroupSettings.git|YouGroupSettings"
           "ENABLE_YQ|yq|https://github.com/PoomSmart/YouQuality.git|YouQuality"
@@ -116,7 +116,7 @@ runs:
           "ENABLE_YTWEAKS|ytwks|https://github.com/fosterbarnes/YTweaks.git|YTweaks"
           "ENABLE_YTICONS|yticons|https://github.com/PoomSmart/YTIcons.git|YTIcons"
           "ENABLE_DEMC|demc|https://github.com/therealFoxster/DontEatMyContent.git|DontEatMyContent"
-          "ENABLE_GONERINO|gonerino|https://github.com/castdrian/Gonerino.git|Gonerino"
+          "ENABLE_GONERINO|gonerino|https://github.com/fosterbarnes/YGonerino.git|Gonerino"
           "ENABLE_AUTOFLEX|autoflex|https://github.com/pwnless/AutoFLEX.git|AutoFLEX"
         )
         

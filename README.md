@@ -1,23 +1,24 @@
-# YouTube Plus (YTweaks Fork)
+# <p align="left"><img src="./Resources/repoHeader.png" width="1000"></p>
+
+
+
 [YouTube Plus](https://github.com/dayanch96/YTLite) with added plugins.
 
 v20.10.4 is ***strongly*** recommended for proper compatibility
-
-[NOTE] Some users are reporting a prompt to update, blocking app usage on 20.10.4. This is a known issue and is being looked into
 
 This repo focuses on simplifying the build process of YouTube Plus, and adding more optional tweaks to bundle with it (specifically [YTweaks](https://github.com/fosterbarnes/YTweaks)). No changes have been made to the YouTube Plus .deb itself, just the tweaks that get packaged with it. 
 
 When building the app, the latest stable YouTube Plus .deb is downloaded from the original repo, then other tweaks are built from source. All tweaks are then injected into your IPA.
 
 YTweaks added settings:
-- **Fullscreen to the right or left:** Locks fullscreen orientation.
-- **Night Mode**: Lowers brightness below device minimum by "faking it" with an app-wide semi-transparent black overlay. Works best on OLED devices.
-- **Disable floating miniplayer:** Restores the old miniplayer by disabling the floating miniplayer.
-- **Virtual fullscreen bezels:** Adds invisible touch-safe zones on black bars to prevent accidental taps and skips.
-- **Fix Casting** - Attempts to fix casting by changing some A/B flags. Only works on v20.10.4 or lower
-
-Experimental planned features
-- **Hide AI Summaries:** Hides AI summaries that appear in the feed.
+- **Force Fullscreen Direction (Button)**: Choose Off, Left, Right, or Portrait for the fullscreen button.
+- **Force Fullscreen Direction (Gesture)**: Choose Off, Left, Right, or Portrait for the swipe-up gesture. Independent of the button setting.
+- **Disable floating miniplayer**: Restores the old miniplayer by disabling the floating miniplayer.
+- **Virtual fullscreen bezels**: Adds invisible touch-safe zones on black bars to prevent accidental taps and skips.
+- **Fix Casting** - Attempts to fix casting by changing some A/B flags. Only works on v20.10.4 or lower.
+- **Hide AI Summaries**: Attempts to block/hide AI summaries below videos in the home feed.
+- **Fake Brightness**: Lowers apparent brightness below the system minimum. Works best on OLED devices.
+- **Schedule Fake Brightness (Night Mode)**: Automatically applies fake brightness during a set time range.
 
 
 Added tweaks:
@@ -25,7 +26,7 @@ Added tweaks:
 - [YTABConfig](https://github.com/PoomSmart/YTABConfig)
 - [YTIcons](https://github.com/PoomSmart/YTIcons)
 - [YouGroupSettings](https://github.com/fosterbarnes/YouGroupSettings)
-- [Gonerino](https://github.com/castdrian/Gonerino)
+- [Gonerino](https://github.com/fosterbarnes/YGonerino)
 - [AutoFLEX](https://github.com/pwnless/AutoFLEX)
 
 Original repo: https://github.com/dayanch96/YTLite
@@ -57,7 +58,7 @@ If you plan on testing, adding tweaks that aren't integrated with this repo, mak
 <em>We cannot provide this file due to legal reasons.</em><br>
 
 - Upload the decrypted IPA to a file hosting service (e.g., litterbox.catbox.moe or Dropbox).<br>
-<em>If you use Dropbox, change the end of the URL from <code>dl=0</code> to <code>dl=1</code>.</em><br>
+<em>You can't skip this step, copy/pasting a link from a decrypt IPA site will not work.</em><br>
 
 - Paste the direct download link to the decrypted IPA into the provided field.<br>
 <em><strong>NOTE:</strong> Make sure to provide a direct download link to the file, not a webpage. Otherwise, the process will fail.</em><br>
@@ -183,7 +184,7 @@ Tweak Integration Flags:
     --enable-ytweaks             YTweaks (default: true)
     --enable-yougroupsettings    Settings (default: true)
     --enable-yticons             YTIcons (default: false)
-    --enable-gonerino            Gonerino (default: false)
+    --enable-gonerino            Gonerino (default: true)
     --enable-autoflex            AutoFLEX (default: false)
 
     --disable-youpip             YouPiP
@@ -273,8 +274,8 @@ Fill out an [issue form](https://github.com/fosterbarnes/YTPlusYTweaks/issues) w
 ## Supported Versions
 <ul>
     <li><strong>Recommended:</strong> <em>20.10.4</em></li>
-   <li><strong>Latest confirmed:</strong> <em>21.24.3</em></li>
-   <li><strong>Date tested:</strong> <em>June 17, 2026</em></li>
+   <li><strong>Latest confirmed:</strong> <em>21.26.4</em></li>
+   <li><strong>Date tested:</strong> <em>7/3/26</em></li>
    <li><strong>YouTube Plus:</strong> <em>5.2.1</em></li>
 </ul>
 
@@ -343,8 +344,8 @@ Fill out an [issue form](https://github.com/fosterbarnes/YTPlusYTweaks/issues) w
 
 <details>
   <summary>Gonerino</summary>
-  <p>Gonerino is a tweak developed by <a href="https://github.com/castdrian">castdrian</a> that lets you block certain content from your home feed.</p>
-  <p>Source code and additional information are available <a href="https://github.com/castdrian/Gonerino">in castdrian's GitHub repository</a>.</p>
+  <p>Gonerino is a tweak developed by <a href="https://github.com/castdrian">castdrian</a> that lets you block certain content from your home feed. Forked by <a href="https://github.com/FosterBarnes">FosterBarnes</a> as <a href="https://github.com/fosterbarnes/YGonerino">YGonerino</a> with a v1.3.3 fix for home feed blocking.</p>
+  <p>Source code and additional information are available <a href="https://github.com/fosterbarnes/YGonerino">in fosterbarnes's GitHub repository</a>.</p>
 </details>
 
 <details>
@@ -362,7 +363,7 @@ Thank you to everyone that made this project possible! This project would not ex
 
 [therealFoxster](https://github.com/therealFoxster) - DontEatMyContent
 
-[castdrian](https://github.com/castdrian/Gonerino) - Gonerino
+[castdrian](https://github.com/castdrian/Gonerino) - Gonerino (original), [fosterbarnes](https://github.com/fosterbarnes/YGonerino) - YGonerino fork
 
 [pwnless](https://github.com/pwnless/AutoFLEX) - AutoFLEX
 

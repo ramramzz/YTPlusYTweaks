@@ -19,7 +19,7 @@ ENABLE_YTABCONFIG=true
 ENABLE_YTWEAKS=true
 ENABLE_YTICONS=false
 ENABLE_YOUGROUPSETTINGS=true
-ENABLE_GONERINO=false
+ENABLE_GONERINO=true
 ENABLE_AUTOFLEX=false
 TWEAK_VERSION=""
 TWEAK_VERSION_PROVIDED=false
@@ -77,7 +77,7 @@ Tweak Integration Flags:
     --enable-ytweaks             YTweaks (default: true)
     --enable-yougroupsettings    Settings (default: true)
     --enable-yticons             YTIcons (default: false)
-    --enable-gonerino            Gonerino (default: false)
+    --enable-gonerino            Gonerino (default: true)
     --enable-autoflex            AutoFLEX (default: false)
 
     --disable-youpip             YouPiP
@@ -243,6 +243,46 @@ parse_args() {
         usage
         exit 1
     fi
+}
+
+# Ensure xcrun can locate the iphoneos SDK (required by YTUHD libvpx/dav1d builds).
+ensure_xcode() {
+    if xcrun --sdk iphoneos --show-sdk-path &>/dev/null; then
+        return
+    fi
+
+    local xcode_dev="/Applications/Xcode.app/Contents/Developer"
+    if [[ -d "$xcode_dev" ]]; then
+        export DEVELOPER_DIR="$xcode_dev"
+        if xcrun --sdk iphoneos --show-sdk-path &>/dev/null; then
+            print_warning "xcode-select points to Command Line Tools; using Xcode at $xcode_dev"
+            print_info "Run 'sudo xcode-select -s $xcode_dev' to fix this permanently"
+            return
+        fi
+    fi
+
+    print_error "Cannot locate iphoneos SDK (xcrun --sdk iphoneos failed)."
+    print_error "Install Xcode from the App Store, then run:"
+    print_error "  sudo xcode-select -s /Applications/Xcode.app/Contents/Developer"
+    exit 1
+}
+
+# Ensure meson/ninja are available (required by YTUHD dav1d build).
+ensure_build_tools() {
+    if [[ "$ENABLE_YTUHD" != "true" ]]; then
+        return
+    fi
+    if command -v meson &>/dev/null; then
+        return
+    fi
+    if command -v brew &>/dev/null; then
+        print_info "Installing meson (required for YTUHD)..."
+        brew install meson
+        return
+    fi
+    print_error "meson is required to build YTUHD but was not found."
+    print_error "Install it with: brew install meson"
+    exit 1
 }
 
 # Ensure THEOS is set (e.g. from build_dependencies.sh or environment)
@@ -473,7 +513,7 @@ download_ytplus() {
 clone_safari_extension() {
     print_info "Cloning Open in YouTube Safari extension..."
     
-    if [[ -f "$BUILD_DIR/OpenYoutubeSafariExtension.appex" ]]; then
+    if [[ -e "$BUILD_DIR/OpenYoutubeSafariExtension.appex" ]]; then
         print_info "Safari extension already exists"
         return
     fi
@@ -522,9 +562,9 @@ clone_youtube_header() {
     if ! any_tweaks_enabled; then
         return
     fi
-    
+
     print_info "Cloning YouTubeHeader..."
-    
+
     if [[ -d "$THEOS/include/YouTubeHeader" ]]; then
         print_info "YouTubeHeader exists. Pulling latest changes..."
         cd "$THEOS/include/YouTubeHeader"
@@ -537,14 +577,13 @@ clone_youtube_header() {
         git clone --quiet --depth=1 https://github.com/PoomSmart/YouTubeHeader.git
         cd "$BUILD_DIR"
     fi
-    
-    # Copy to YTHeaders if DontEatMyContent is enabled
+
     if [[ "$ENABLE_DEMC" == "true" ]]; then
         print_info "Copying YouTubeHeader to YTHeaders for DontEatMyContent..."
         rm -rf "$THEOS/include/YTHeaders"
         cp -r "$THEOS/include/YouTubeHeader" "$THEOS/include/YTHeaders"
     fi
-    
+
     print_success "YouTubeHeader setup complete"
 }
 
@@ -553,9 +592,9 @@ clone_ps_header() {
     if ! any_tweaks_enabled; then
         return
     fi
-    
+
     print_info "Cloning PSHeader..."
-    
+
     if [[ -d "$THEOS/include/PSHeader" ]]; then
         print_info "PSHeader exists. Pulling latest changes..."
         cd "$THEOS/include/PSHeader"
@@ -568,7 +607,7 @@ clone_ps_header() {
         git clone --quiet --depth=1 https://github.com/PoomSmart/PSHeader.git
         cd "$BUILD_DIR"
     fi
-    
+
     print_success "PSHeader setup complete"
 }
 
@@ -593,9 +632,9 @@ clone_tweak() {
     if [[ ! -d "$name" ]]; then
         print_info "Cloning $name..."
         if [[ -n "$extra_flags" ]]; then
-            git clone --quiet --depth=1 $extra_flags "$repo_url"
+            git clone --quiet --depth=1 $extra_flags "$repo_url" "$name"
         else
-            git clone --quiet --depth=1 "$repo_url"
+            git clone --quiet --depth=1 "$repo_url" "$name"
         fi
     fi
 }
@@ -611,7 +650,7 @@ clone_tweaks() {
     cd "$BUILD_DIR"
     
     clone_tweak "$ENABLE_YOUPIP" "YouPiP" "youpip.deb" "https://github.com/PoomSmart/YouPiP.git"
-    clone_tweak "$ENABLE_YTUHD" "YTUHD" "ytuhd.deb" "https://github.com/Tonwalter888/YTUHD.git"
+    clone_tweak "$ENABLE_YTUHD" "YTUHD" "ytuhd.deb" "https://github.com/PoomSmart/YTUHD.git" "--recurse-submodules --shallow-submodules"
     clone_tweak "$ENABLE_RYD" "Return-YouTube-Dislikes" "ryd.deb" "https://github.com/PoomSmart/Return-YouTube-Dislikes.git"
     clone_tweak "$ENABLE_YOUGROUPSETTINGS" "YouGroupSettings" "ygs.deb" "https://github.com/fosterbarnes/YouGroupSettings.git"
     clone_tweak "$ENABLE_YQ" "YouQuality" "yq.deb" "https://github.com/PoomSmart/YouQuality.git"
@@ -619,7 +658,7 @@ clone_tweaks() {
     clone_tweak "$ENABLE_YTWEAKS" "YTweaks" "ytwks.deb" "https://github.com/fosterbarnes/YTweaks.git"
     clone_tweak "$ENABLE_YTICONS" "YTIcons" "yticons.deb" "https://github.com/PoomSmart/YTIcons.git"
     clone_tweak "$ENABLE_DEMC" "DontEatMyContent" "demc.deb" "https://github.com/therealFoxster/DontEatMyContent.git" "--recurse-submodules"
-    clone_tweak "$ENABLE_GONERINO" "Gonerino" "gonerino.deb" "https://github.com/castdrian/Gonerino.git"
+    clone_tweak "$ENABLE_GONERINO" "Gonerino" "gonerino.deb" "https://github.com/fosterbarnes/YGonerino.git"
     clone_tweak "$ENABLE_AUTOFLEX" "AutoFLEX" "autoflex.deb" "https://github.com/pwnless/AutoFLEX.git"
     
     # YTVideoOverlay is required if YouPiP or YouQuality is enabled
@@ -759,11 +798,12 @@ copy_prebuilt_debs() {
 }
 
 # Helper function to build a single tweak
-# Usage: build_tweak <enable_flag> <name> <deb_name>
+# Usage: build_tweak <enable_flag> <name> <deb_name> [make_extra]
 build_tweak() {
     local enable_flag="$1"
     local name="$2"
     local deb_name="$3"
+    local make_extra="${4:-}"
     
     if [[ "$enable_flag" != "true" ]]; then
         return
@@ -776,7 +816,18 @@ build_tweak() {
     
     print_info "Building $name..."
     cd "$name"
-    make clean package DEBUG=0 FINALPACKAGE=1
+    case "$name" in
+        YTUHD)
+            make libvpx dav1d $make_extra
+            ;;
+        YTIcons)
+            # -Wincompatible-pointer-types from newer Theos/clang
+            if [[ -f Makefile ]] && ! grep -q 'incompatible-pointer-types' Makefile; then
+                sed -i '' 's/-fobjc-arc/-fobjc-arc -Wno-incompatible-pointer-types/' Makefile
+            fi
+            ;;
+    esac
+    make clean package DEBUG=0 FINALPACKAGE=1 $make_extra
     mv packages/*.deb "$BUILD_DIR/$deb_name"
     cd ..
 }
@@ -798,7 +849,7 @@ build_tweaks() {
     export THEOS="$THEOS"
     
     build_tweak "$ENABLE_YOUPIP" "YouPiP" "youpip.deb"
-    build_tweak "$ENABLE_YTUHD" "YTUHD" "ytuhd.deb"
+    build_tweak "$ENABLE_YTUHD" "YTUHD" "ytuhd.deb" "SIDELOAD=1"
     build_tweak "$ENABLE_RYD" "Return-YouTube-Dislikes" "ryd.deb"
     build_tweak "$ENABLE_YOUGROUPSETTINGS" "YouGroupSettings" "ygs.deb"
     build_tweak "$ENABLE_YQ" "YouQuality" "yq.deb"
@@ -812,7 +863,11 @@ build_tweaks() {
         if [[ "$USE_PREBUILT_DEBS" == "true" ]] && [[ -f "$BUILD_DIR/autoflex.deb" ]]; then
             print_info "Skipping AutoFLEX build (using pre-built)"
         else
+            # -Wgnu-folding-constant from newer Theos/clang in vendored FLEX sources
             print_info "Building AutoFLEX..."
+            if [[ -f AutoFLEX/Makefile ]] && ! grep -q 'gnu-folding-constant' AutoFLEX/Makefile; then
+                sed -i '' 's/-Wno-unused-but-set-variable/-Wno-unused-but-set-variable -Wno-gnu-folding-constant/' AutoFLEX/Makefile
+            fi
             cd AutoFLEX
             chmod +x build.sh
             ./build.sh
@@ -942,6 +997,8 @@ main() {
     get_app_version
     get_latest_version
     if any_tweaks_enabled; then
+        ensure_xcode
+        ensure_build_tools
         ensure_sdk
     fi
     download_ytplus

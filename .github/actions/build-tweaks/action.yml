@@ -23,6 +23,16 @@ inputs:
     required: true
   enable_autoflex:
     required: true
+  enable_youmute:
+    required: true
+  enable_youloop:
+    required: true
+  enable_youspeed:
+    required: true
+  enable_yougetcaption:
+    required: true
+  enable_youfixplaybackissues:
+    required: true
   cache_youpip_hit:
     required: true
   cache_ytuhd_hit:
@@ -46,6 +56,16 @@ inputs:
   cache_autoflex_hit:
     required: true
   cache_ytvo_hit:
+    required: true
+  cache_youmute_hit:
+    required: true
+  cache_youloop_hit:
+    required: true
+  cache_youspeed_hit:
+    required: true
+  cache_yougetcaption_hit:
+    required: true
+  cache_yfpi_hit:
     required: true
   theos_path:
     required: true
@@ -84,6 +104,16 @@ runs:
         CACHE_GONERINO_HIT: ${{ inputs.cache_gonerino_hit }}
         CACHE_AUTOFLEX_HIT: ${{ inputs.cache_autoflex_hit }}
         CACHE_YTVO_HIT: ${{ inputs.cache_ytvo_hit }}
+        ENABLE_YOUMUTE: ${{ inputs.enable_youmute }}
+        ENABLE_YOULOOP: ${{ inputs.enable_youloop }}
+        ENABLE_YOUSPEED: ${{ inputs.enable_youspeed }}
+        ENABLE_YOUGETCAPTION: ${{ inputs.enable_yougetcaption }}
+        CACHE_YOUMUTE_HIT: ${{ inputs.cache_youmute_hit }}
+        CACHE_YOULOOP_HIT: ${{ inputs.cache_youloop_hit }}
+        CACHE_YOUSPEED_HIT: ${{ inputs.cache_youspeed_hit }}
+        CACHE_YOUGETCAPTION_HIT: ${{ inputs.cache_yougetcaption_hit }}
+        ENABLE_YOUFIXPLAYBACKISSUES: ${{ inputs.enable_youfixplaybackissues }}
+        CACHE_YFPI_HIT: ${{ inputs.cache_yfpi_hit }}
       run: |
         cd ${{ inputs.workspace }}
         
@@ -99,6 +129,11 @@ runs:
           "ENABLE_YTICONS|CACHE_YTICONS_HIT|YTIcons|yticons.deb|YTIcons|"
           "ENABLE_DEMC|CACHE_DEMC_HIT|DontEatMyContent|demc.deb|DontEatMyContent|"
           "ENABLE_GONERINO|CACHE_GONERINO_HIT|Gonerino|gonerino.deb|Gonerino|"
+          "ENABLE_YOUMUTE|CACHE_YOUMUTE_HIT|YouMute|youmute.deb|YouMute|"
+          "ENABLE_YOULOOP|CACHE_YOULOOP_HIT|YouLoop|youloop.deb|YouLoop|"
+          "ENABLE_YOUSPEED|CACHE_YOUSPEED_HIT|YouSpeed|youspeed.deb|YouSpeed|"
+          "ENABLE_YOUGETCAPTION|CACHE_YOUGETCAPTION_HIT|YouGetCaption|yougetcaption.deb|YouGetCaption|"
+          "ENABLE_YOUFIXPLAYBACKISSUES|CACHE_YFPI_HIT|YouFixPlaybackIssues|youfixplaybackissues.deb|YouFixPlaybackIssues|"
         )
         
         for tweak in "${tweaks[@]}"; do
@@ -113,6 +148,10 @@ runs:
               elif [ "$dir_name" = "YTIcons" ] && [ -f Makefile ] && ! grep -q 'incompatible-pointer-types' Makefile; then
                 # -Wincompatible-pointer-types from newer Theos/clang
                 sed -i '' 's/-fobjc-arc/-fobjc-arc -Wno-incompatible-pointer-types/' Makefile
+              elif [ "$dir_name" = "YouFixPlaybackIssues" ] && [ -f Makefile ]; then
+                # Replace hardcoded SDK version in TARGET so it uses whatever SDK is installed
+                SDK_VER=$(basename "$(ls -d "$THEOS/sdks/iPhoneOS"*.sdk | head -1)" | sed 's/iPhoneOS\(.*\)\.sdk/\1/')
+                sed -i '' "s/TARGET := iphone:clang:[0-9.]*:/TARGET := iphone:clang:${SDK_VER}:/" Makefile
               fi
               make clean package DEBUG=0 FINALPACKAGE=1 $make_extra
               mv packages/*.deb "${{ inputs.workspace }}/$output_file"

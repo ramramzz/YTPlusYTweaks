@@ -23,6 +23,16 @@ inputs:
     required: true
   enable_autoflex:
     required: true
+  enable_youmute:
+    required: true
+  enable_youloop:
+    required: true
+  enable_youspeed:
+    required: true
+  enable_yougetcaption:
+    required: true
+  enable_youfixplaybackissues:
+    required: true
   cache_youpip_hit:
     required: true
   cache_ytuhd_hit:
@@ -46,6 +56,16 @@ inputs:
   cache_autoflex_hit:
     required: true
   cache_ytvo_hit:
+    required: true
+  cache_youmute_hit:
+    required: true
+  cache_youloop_hit:
+    required: true
+  cache_youspeed_hit:
+    required: true
+  cache_yougetcaption_hit:
+    required: true
+  cache_yfpi_hit:
     required: true
   workspace:
     required: true
@@ -80,6 +100,16 @@ runs:
         CACHE_GONERINO_HIT: ${{ inputs.cache_gonerino_hit }}
         CACHE_AUTOFLEX_HIT: ${{ inputs.cache_autoflex_hit }}
         CACHE_YTVO_HIT: ${{ inputs.cache_ytvo_hit }}
+        ENABLE_YOUMUTE: ${{ inputs.enable_youmute }}
+        ENABLE_YOULOOP: ${{ inputs.enable_youloop }}
+        ENABLE_YOUSPEED: ${{ inputs.enable_youspeed }}
+        ENABLE_YOUGETCAPTION: ${{ inputs.enable_yougetcaption }}
+        CACHE_YOUMUTE_HIT: ${{ inputs.cache_youmute_hit }}
+        CACHE_YOULOOP_HIT: ${{ inputs.cache_youloop_hit }}
+        CACHE_YOUSPEED_HIT: ${{ inputs.cache_youspeed_hit }}
+        CACHE_YOUGETCAPTION_HIT: ${{ inputs.cache_yougetcaption_hit }}
+        ENABLE_YOUFIXPLAYBACKISSUES: ${{ inputs.enable_youfixplaybackissues }}
+        CACHE_YFPI_HIT: ${{ inputs.cache_yfpi_hit }}
       run: |
         cd ${{ inputs.workspace }}
         
@@ -96,6 +126,10 @@ runs:
           "ENABLE_DEMC|CACHE_DEMC_HIT|https://github.com/therealFoxster/DontEatMyContent.git|DontEatMyContent|--recurse-submodules"
           "ENABLE_GONERINO|CACHE_GONERINO_HIT|https://github.com/fosterbarnes/YGonerino.git|Gonerino|"
           "ENABLE_AUTOFLEX|CACHE_AUTOFLEX_HIT|https://github.com/pwnless/AutoFLEX.git|AutoFLEX|"
+          "ENABLE_YOUMUTE|CACHE_YOUMUTE_HIT|https://github.com/PoomSmart/YouMute.git|YouMute|"
+          "ENABLE_YOULOOP|CACHE_YOULOOP_HIT|https://github.com/bhackel/YouLoop.git|YouLoop|"
+          "ENABLE_YOUSPEED|CACHE_YOUSPEED_HIT|https://github.com/PoomSmart/YouSpeed.git|YouSpeed|"
+          "ENABLE_YOUGETCAPTION|CACHE_YOUGETCAPTION_HIT|https://github.com/PoomSmart/YouGetCaption.git|YouGetCaption|"
         )
         
         for tweak in "${tweaks[@]}"; do
@@ -114,6 +148,21 @@ runs:
             git clone --quiet --depth=1 https://github.com/PoomSmart/YTVideoOverlay.git
           else
             echo "YTVideoOverlay already exists, skipping clone"
+          fi
+        fi
+        
+        # Handle YouFixPlaybackIssues (pins to a specific commit and subdirectory)
+        if [ "$ENABLE_YOUFIXPLAYBACKISSUES" = "true" ] && [ "$CACHE_YFPI_HIT" != "true" ]; then
+          if [ ! -d "YouFixPlaybackIssues" ]; then
+            echo "Cloning YouFixPlaybackIssues..."
+            git clone --quiet https://github.com/AppropriateNet2928/YTLitePlusRenewed.git YouFixPlaybackIssues_repo
+            cd YouFixPlaybackIssues_repo
+            git checkout --quiet adec498be498fb535f5712a1df84ec349f6db93a
+            cd ..
+            mv YouFixPlaybackIssues_repo/YouFixPlaybackIssues YouFixPlaybackIssues
+            rm -rf YouFixPlaybackIssues_repo
+          else
+            echo "YouFixPlaybackIssues already exists, skipping clone"
           fi
         fi
 
